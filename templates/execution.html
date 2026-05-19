@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自動化執行模擬</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #0a0a0f; --surface: #12121a; --border: #252535; --accent: #7c6af7; --text: #e8e8f0; --success: #7cf7b8;}
+  body { background: var(--bg); color: var(--text); font-family: 'Noto Sans TC', sans-serif; padding: 40px; }
+  .container { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+  
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  h2 { font-size: 18px; margin-bottom: 20px; font-weight: 500; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  
+  /* 表單區塊 */
+  .field { margin-bottom: 15px; }
+  label { display: block; font-size: 12px; color: #8b8b9d; margin-bottom: 5px; }
+  input { width: 100%; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); color: var(--text); border-radius: 8px; pointer-events: none; }
+  input.typing { border-color: var(--accent); box-shadow: 0 0 10px rgba(124,106,247,0.3); }
+  
+  /* 圖片上傳區塊 */
+  .img-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+  .img-box { border: 1px dashed var(--border); border-radius: 8px; height: 120px; display: flex; align-items: center; justify-content: center; flex-direction: column; position: relative; overflow: hidden; background: rgba(0,0,0,0.2); }
+  .img-box span { font-size: 12px; color: #8b8b9d; z-index: 2;}
+  .img-box img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.5s; z-index: 1;}
+  .img-box.uploading { border-color: var(--accent); border-style: solid; }
+  .img-box.done img { opacity: 1; }
+  
+  /* 終端機日誌 */
+  .terminal { background: #000; border-radius: 8px; padding: 15px; height: 200px; overflow-y: auto; font-family: 'Space Mono', monospace; font-size: 12px; color: #8b8b9d; grid-column: 1 / -1; margin-top: 20px;}
+  .terminal p { margin: 5px 0; }
+  .terminal .sys { color: var(--accent); }
+  .terminal .ok { color: var(--success); }
+
+  .back-btn { display: inline-block; padding: 10px 20px; background: var(--surface); border: 1px solid var(--border); color: var(--text); text-decoration: none; border-radius: 8px; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+<div style="max-width: 900px; margin: 0 auto;">
+  <a href="/dashboard" class="back-btn">← 返回儀表板</a>
+  <h1 style="font-size:24px; margin-bottom:5px;">任務執行中：{{ service.name }}</h1>
+  <p style="color:#8b8b9d; margin-bottom: 30px;">自動化機器人正在為您執行客戶資料建檔與附件上傳...</p>
+
+  <div class="container">
+    <div class="panel">
+      <h2>📝 客戶基本資料</h2>
+      <div class="field"><label>商家名稱</label><input type="text" id="iBiz" placeholder="等待輸入..."></div>
+      <div class="field"><label>負責人姓名</label><input type="text" id="iName" placeholder="等待輸入..."></div>
+      <div class="field"><label>手機號碼</label><input type="text" id="iPhone" placeholder="等待輸入..."></div>
+      <div class="field"><label>聯絡地址</label><input type="text" id="iAddr" placeholder="等待輸入..."></div>
+    </div>
+
+    <div class="panel">
+      <h2>📎 附件自動上傳</h2>
+      <div class="img-grid">
+        <div class="img-box" id="bStore"><span>店家照片</span><img id="imgStore" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMyIvPjwvc3ZnPg=='"></div>
+        <div class="img-box" id="bIdF"><span>身分證正面</span><img id="imgIdF" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMyIvPjwvc3ZnPg=='"></div>
+        <div class="img-box" id="bIdB"><span>身分證反面</span><img id="imgIdB" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMyIvPjwvc3ZnPg=='"></div>
+        <div class="img-box" id="bBank"><span>銀行帳戶照片</span><img id="imgBank" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMzMyIvPjwvc3ZnPg=='"></div>
+      </div>
+    </div>
+
+    <div class="terminal" id="term">
+      <p><span class="sys">[SYSTEM]</span> 初始化自動執行引擎...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const delay = ms => new Promise(res => setTimeout(res, ms));
+  const term = document.getElementById('term');
+  
+  function log(msg, type='sys') {
+    term.innerHTML += `<p><span class="${type}">[${type.toUpperCase()}]</span> ${msg}</p>`;
+    term.scrollTop = term.scrollHeight;
+  }
+
+  // 模擬打字效果
+  async function typeText(inputId, text) {
+    const el = document.getElementById(inputId);
+    el.classList.add('typing');
+    log(`開始讀取並填入：${text}`);
+    let current = '';
+    for(let char of text) {
+      current += char;
+      el.value = current;
+      await delay(80); // 打字速度
+    }
+    el.classList.remove('typing');
+    log(`欄位填寫完成`, 'ok');
+    await delay(300);
+  }
+
+  // 模擬圖片上傳
+  async function simulateUpload(boxId, imgId, src, name) {
+    const box = document.getElementById(boxId);
+    box.classList.add('uploading');
+    log(`開始擷取本機檔案：${name}`);
+    await delay(1000); // 模擬上傳等待
+    document.getElementById(imgId).src = src;
+    box.classList.remove('uploading');
+    box.classList.add('done');
+    log(`檔案上傳成功：${name}`, 'ok');
+    await delay(500);
+  }
+
+  // 主控程式
+  async function runSimulation() {
+    await delay(1000);
+    log('請求本機資料解析...');
+    
+    // 從後端讀取本機 txt 資料
+    const res = await fetch('/api/simulation-data');
+    const data = await res.json();
+    log('資料解析成功', 'ok');
+
+    // 依序執行文字輸入
+    await typeText('iBiz', data.company);
+    await typeText('iName', data.name);
+    await typeText('iPhone', data.phone);
+    await typeText('iAddr', data.address);
+
+    log('啟動影像串流模組...');
+    await delay(500);
+
+    // 依序執行圖片載入
+    await simulateUpload('bStore', 'imgStore', '/local_data/store.jpg', '店家照片 (store.jpg)');
+    await simulateUpload('bIdF', 'imgIdF', '/local_data/id_front.jpg', '身分證正面 (id_front.jpg)');
+    await simulateUpload('bIdB', 'imgIdB', '/local_data/id_back.jpg', '身分證反面 (id_back.jpg)');
+    await simulateUpload('bBank', 'imgBank', '/local_data/bank.jpg', '銀行帳戶 (bank.jpg)');
+
+    // === 新增：執行完畢自動更新資料庫狀態為已上傳 ===
+    log('正在將資料狀態回傳至資料庫...');
+    try {
+      // 取得網址列中的 service_id
+      const serviceId = window.location.pathname.split('/').pop();
+      await fetch(`/api/services/${serviceId}/upload-status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ has_uploaded: true })
+      });
+      log('資料庫狀態更新成功', 'ok');
+    } catch (e) {
+      log('狀態更新失敗，請檢查網路連線', 'sys');
+    }
+
+    log('🎉 所有自動化任務執行完畢！', 'ok');
+    document.querySelector('h1').innerHTML += ' <span style="color:var(--success)">[已完成]</span>';
+  }
+
+  window.onload = runSimulation;
+</script>
+</body>
+</html>

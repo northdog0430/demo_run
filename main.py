@@ -1,0 +1,216 @@
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Response, Cookie
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session
+from typing import Optional, List
+import os
+
+from database import engine, get_db, Base
+from models import User, RoleEnum, ServiceItem
+from schemas import UserCreate, UserUpdate, UserResponse, LoginRequest, Token, ServiceItemCreate, ServiceItemUpdate, ServiceItemResponse
+from auth import verify_password, get_password_hash, create_access_token, decode_token
+
+# 建立資料表
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="客戶與服務管理系統")
+templates = Jinja2Templates(directory="templates")
+
+# 掛載本機靜態資料夾，用於模擬讀取照片
+os.makedirs("local_data", exist_ok=True)
+app.mount("/local_data", StaticFiles(directory="local_data"), name="local_data")
+
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optional[User]:
+    token = request.cookies.get("access_token")
+    if not token:
+        return None
+    payload = decode_token(token)
+    if not payload:
+        return None
+    username = payload.get("sub")
+    if not username:
+        return None
+    return db.query(User).filter(User.username == username).first()
+
+def require_login(request: Request, db: Session = Depends(get_db)) -> User:
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="請先登入")
+    return user
+
+def require_admin(request: Request, db: Session = Depends(get_db)) -> User:
+    user = require_login(request, db)
+    if user.role != RoleEnum.admin:
+        raise HTTPException(status_code=403, detail="需要管理員權限")
+    return user
+
+def init_admin(db: Session):
+    admin = db.query(User).filter(User.role == RoleEnum.admin).first()
+    if not admin:
+        default_admin = User(
+            username="admin",
+            email="admin@example.com",
+            full_name="系統管理員",
+            hashed_password=get_password_hash("admin123"),
+            role=RoleEnum.admin,
+            is_active=True,
+        )
+        db.add(default_admin)
+        db.commit()
+
+@app.on_event("startup")
+def startup():
+    db = next(get_db())
+    init_admin(db)
+
+# ─────────────────────────────────────────
+# 頁面路由
+# ─────────────────────────────────────────
+
+@app.get("/", response_class=HTMLResponse)
+def root(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if user:
+        return RedirectResponse(url="/dashboard")
+    return RedirectResponse(url="/login")
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if user:
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard_page(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    return templates.TemplateResponse("dashboard.html", {"request": request, "user": user})
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    if user.role != RoleEnum.admin:
+        return HTMLResponse("<h2>403 - 無權限存取</h2>", status_code=403)
+    return templates.TemplateResponse("admin.html", {"request": request, "user": user})
+
+# 新增：執行模擬頁面
+@app.get("/execution/{service_id}", response_class=HTMLResponse)
+def execution_page(request: Request, service_id: int, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    service = db.query(ServiceItem).filter(ServiceItem.id == service_id).first()
+    if not service:
+        return HTMLResponse("<h2>404 - 找不到服務項目</h2>", status_code=404)
+    return templates.TemplateResponse("execution.html", {"request": request, "user": user, "service": service})
+
+# ─────────────────────────────────────────
+# API 路由
+# ─────────────────────────────────────────
+@app.post("/api/auth/login")
+def api_login(data: LoginRequest, response: Response, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == data.username).first()
+    if not user or not verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="帳號或密碼錯誤")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="帳號已停用")
+
+    token = create_access_token({"sub": user.username})
+    response.set_cookie(key="access_token", value=token, httponly=True, max_age=3600, samesite="lax")
+    return {"success": True}
+
+@app.post("/api/auth/logout")
+def api_logout(response: Response):
+    response.delete_cookie("access_token")
+    return {"success": True}
+
+@app.get("/api/me")
+def api_me(current_user: User = Depends(require_login)):
+    return {
+        "id": current_user.id, "username": current_user.username,
+        "full_name": current_user.full_name, "email": current_user.email, "role": current_user.role,
+    }
+
+# ── 使用者 CRUD ──
+@app.get("/api/users", response_model=List[UserResponse])
+def list_users(db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    return db.query(User).order_by(User.id).all()
+
+@app.post("/api/users", response_model=UserResponse)
+def create_user(data: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    if db.query(User).filter(User.username == data.username).first(): raise HTTPException(status_code=400, detail="帳號已存在")
+    user = User(username=data.username, email=data.email, full_name=data.full_name, hashed_password=get_password_hash(data.password), role=data.role, is_active=data.is_active)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+@app.delete("/api/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user: db.delete(user); db.commit()
+    return {"success": True}
+
+# ── 服務項目 CRUD ──
+@app.get("/api/services", response_model=List[ServiceItemResponse])
+def list_services(db: Session = Depends(get_db), current_user: User = Depends(require_login)):
+    return db.query(ServiceItem).order_by(ServiceItem.published_date.desc()).all()
+
+@app.post("/api/services", response_model=ServiceItemResponse)
+def create_service(data: ServiceItemCreate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    service = ServiceItem(**data.dict())
+    db.add(service)
+    db.commit()
+    db.refresh(service)
+    return service
+
+@app.put("/api/services/{service_id}", response_model=ServiceItemResponse)
+def update_service(service_id: int, data: ServiceItemUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    service = db.query(ServiceItem).filter(ServiceItem.id == service_id).first()
+    if not service: raise HTTPException(status_code=404, detail="找不到服務項目")
+    for key, value in data.dict(exclude_unset=True).items():
+        setattr(service, key, value)
+    db.commit()
+    db.refresh(service)
+    return service
+
+@app.delete("/api/services/{service_id}")
+def delete_service(service_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    service = db.query(ServiceItem).filter(ServiceItem.id == service_id).first()
+    if service: db.delete(service); db.commit()
+    return {"success": True}
+
+@app.patch("/api/services/{service_id}/upload-status")
+def update_upload_status(
+    service_id: int,
+    data: dict, # 接收 {"has_uploaded": true}
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_login)
+):
+    service = db.query(ServiceItem).filter(ServiceItem.id == service_id).first()
+    if not service: raise HTTPException(status_code=404, detail="找不到服務項目")
+
+    if "has_uploaded" in data:
+        service.has_uploaded = data["has_uploaded"]
+        db.commit()
+    return {"success": True}
+
+# ── 新增：讀取本機模擬資料 API ──
+@app.get("/api/simulation-data")
+def get_simulation_data(current_user: User = Depends(require_login)):
+    data = {"company": "預設測試企業", "name": "王大明", "phone": "0912-345-678", "address": "台北市信義區測試路1號"}
+    filepath = "local_data/data.txt"
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                lines = [line.strip() for line in f.read().splitlines() if line.strip()]
+                if len(lines) >= 4:
+                    data = {"company": lines[0], "name": lines[1], "phone": lines[2], "address": lines[3]}
+        except Exception as e:
+            print(f"Error reading TXT: {e}")
+    return data

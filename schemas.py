@@ -18,6 +18,9 @@ class UserBase(BaseModel):
     full_name: Optional[str] = None
     role: RoleEnum = RoleEnum.user
     is_active: bool = True
+    # ──=== 新增這一行 ===──
+    is_paid: bool = False
+
 
 class UserCreate(UserBase):
     password: str
@@ -28,6 +31,8 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     role: Optional[RoleEnum] = None
     is_active: Optional[bool] = None
+    # ──=== 新增這一行 ===──
+    is_paid: Optional[bool] = None
 
 class UserResponse(UserBase):
     id: int
@@ -43,6 +48,7 @@ class ServiceItemBase(BaseModel):
     description: Optional[str] = None
     published_date: date
     has_uploaded: bool = False           # 新增
+    user_id: Optional[int] = None        # ─── 新增這行，指派專案給特定 User ID ───
 
 class ServiceItemCreate(ServiceItemBase):
     pass

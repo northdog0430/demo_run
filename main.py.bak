@@ -55,7 +55,6 @@ def init_admin(db: Session):
             hashed_password=get_password_hash("admin123"),
             role=RoleEnum.admin,
             is_active=True,
-            is_paid=True, # 預設管理員為已付費狀態
         )
         db.add(default_admin)
         db.commit()
@@ -99,24 +98,15 @@ def admin_page(request: Request, db: Session = Depends(get_db)):
         return HTMLResponse("<h2>403 - 無權限存取</h2>", status_code=403)
     return templates.TemplateResponse("admin.html", {"request": request, "user": user})
 
-# 執行模擬頁面 (已加入 Admin 與 付費狀態/專案權限 校驗)
+# 新增：執行模擬頁面
 @app.get("/execution/{service_id}", response_class=HTMLResponse)
 def execution_page(request: Request, service_id: int, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
     if not user:
         return RedirectResponse(url="/login")
-        
     service = db.query(ServiceItem).filter(ServiceItem.id == service_id).first()
     if not service:
         return HTMLResponse("<h2>404 - 找不到服務項目</h2>", status_code=404)
-        
-    # ──=== 新增防護：非管理員身份時，進行付費與專案歸屬檢查 ===──
-    if user.role != RoleEnum.admin:
-        if not user.is_paid:
-            return HTMLResponse("<h2>403 - 尚未付費開通，無權限執行此功能</h2>", status_code=403)
-        if service.user_id != user.id:
-            return HTMLResponse("<h2>403 - 您無權限存取此客戶服務專案</h2>", status_code=403)
-            
     return templates.TemplateResponse("execution.html", {"request": request, "user": user, "service": service})
 
 # ─────────────────────────────────────────
@@ -142,12 +132,8 @@ def api_logout(response: Response):
 @app.get("/api/me")
 def api_me(current_user: User = Depends(require_login)):
     return {
-        "id": current_user.id, 
-        "username": current_user.username,
-        "full_name": current_user.full_name, 
-        "email": current_user.email, 
-        "role": current_user.role,
-        "is_paid": current_user.is_paid,
+        "id": current_user.id, "username": current_user.username,
+        "full_name": current_user.full_name, "email": current_user.email, "role": current_user.role,
     }
 
 # ── 使用者 CRUD ──
@@ -193,6 +179,7 @@ def update_user(
     if data.is_active is not None:
         user.is_active = data.is_active
         
+    # ──=== 新增這兩行：支援儲存付費狀態 ===──
     if data.is_paid is not None:
         user.is_paid = data.is_paid
         
@@ -206,13 +193,7 @@ def update_user(
 # ── 服務項目 CRUD ──
 @app.get("/api/services", response_model=List[ServiceItemResponse])
 def list_services(db: Session = Depends(get_db), current_user: User = Depends(require_login)):
-    query = db.query(ServiceItem)
-    
-    # 如果不是管理員，只能看到綁定給自己的專案
-    if current_user.role != RoleEnum.admin:
-        query = query.filter(ServiceItem.user_id == current_user.id)
-        
-    return query.order_by(ServiceItem.published_date.desc()).all()
+    return db.query(ServiceItem).order_by(ServiceItem.published_date.desc()).all()
 
 @app.post("/api/services", response_model=ServiceItemResponse)
 def create_service(data: ServiceItemCreate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
@@ -248,20 +229,14 @@ def update_upload_status(
     service = db.query(ServiceItem).filter(ServiceItem.id == service_id).first()
     if not service: raise HTTPException(status_code=404, detail="找不到服務項目")
 
-    # ──=== 新增防護：非管理員進行 API 狀態提交時，也防禦未付費與越權操作 ===──
-    if current_user.role != RoleEnum.admin:
-        if not current_user.is_paid:
-            raise HTTPException(status_code=403, detail="尚未付費開通，無法執行此操作")
-        if service.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="無權限修改此專案狀態")
-
     if "has_uploaded" in data:
         service.has_uploaded = data["has_uploaded"]
         db.commit()
     return {"success": True}
 
 
-# ── 讀取本機模擬資料 API ──
+
+# ── 新增：讀取本機模擬資料 API ──
 @app.get("/api/simulation-data")
 def get_simulation_data(current_user: User = Depends(require_login)):
     data = {"company": "預設測試企業", "name": "王大明", "phone": "0912-345-678", "address": "台北市信義區測試路1號"}

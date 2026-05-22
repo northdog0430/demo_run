@@ -6,6 +6,7 @@
 <title>客戶管理儀表板</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
+  /* 基本樣式與先前相同 */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #0a0a0f; --surface: #12121a; --border: #252535;
@@ -41,7 +42,7 @@
   .arrow { transition: transform 0.3s; font-size: 12px; color: var(--muted); }
   .arrow.open { transform: rotate(180deg); }
   .account-body { display: none; padding: 24px; border-top: 1px solid var(--border); }
-  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 24px; }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; }
   .info-item { display: flex; flex-direction: column; gap: 6px; }
   .info-label { font-size: 12px; color: var(--muted); text-transform: uppercase; }
   .info-val { font-size: 15px; font-weight: 500; color: var(--accent-bright); }
@@ -59,7 +60,7 @@
   .status-yes { background: rgba(124,247,184,0.1); border: 1px solid rgba(124,247,184,0.3); color: var(--success); }
   .status-no { background: rgba(247,212,124,0.1); border: 1px solid rgba(247,212,124,0.3); color: var(--warn); }
   
-  /* 詳情 Modal */
+  /* 詳情 Modal - 寬度調整至 500px 以便舒適地呈現雙排圖片 */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
   .modal-overlay.open { display: flex; }
   .modal-content { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 500px; max-width: 95%; max-height: 90vh; overflow-y: auto; }
@@ -103,11 +104,10 @@
     </div>
     <div class="account-body" id="accBody">
       <div class="info-grid">
-        <div class="info-item"><span class="info-label">使用者 ID</span><span class="info-val" id="userId">—</span></div>
         <div class="info-item"><span class="info-label">使用者名稱</span><span class="info-val" id="dispName">—</span></div>
         <div class="info-item"><span class="info-label">電子郵件</span><span class="info-val" id="dispEmail">—</span></div>
         <div class="info-item"><span class="info-label">權限角色</span><span class="info-val" id="dispRole" style="color:var(--success)">—</span></div>
-        <div class="info-item"><span class="info-label">付費狀態</span><span class="info-val" id="isPaid">—</span></div>
+	<div class="info-row"><span class="info-label">付費狀態</span><span class="info-val" id="isPaid">—</span></div>
       </div>
     </div>
   </div>
@@ -149,7 +149,6 @@
 <script>
   let servicesData = [];
   let globalUserIsPaid = false;
-  let globalUserRole = ''; // 新增：用來記錄登入者的角色
 
   function toggleAccount() {
     const body = document.getElementById('accBody');
@@ -160,22 +159,11 @@
   }
 
   fetch('/api/me').then(r=>r.json()).then(u => {
-    globalUserIsPaid = u.is_paid; 
-    globalUserRole = u.role; // 儲存角色
-    document.getElementById('userId').textContent = '#' + String(u.id).padStart(4,'0');
+    globalUserIsPaid = u.is_paid; // 儲存使用者的付費狀態
     document.getElementById('dispName').textContent = u.full_name || u.username;
     document.getElementById('dispEmail').textContent = u.email;
     document.getElementById('dispRole').textContent = u.role === 'admin' ? '系統管理員' : '一般使用者';
-    
-    // 渲染付費狀態
-    const isPaidEl = document.getElementById('isPaid');
-    if (u.is_paid) {
-      isPaidEl.textContent = '已開通 ✓';
-      isPaidEl.style.color = 'var(--success)';
-    } else {
-      isPaidEl.textContent = '未開通 ⚠';
-      isPaidEl.style.color = 'var(--warn)';
-    }
+    document.getElementById('userId').textContent = '#' + String(u.id).padStart(4,'0');
   });
 
   async function loadServices() {
@@ -221,12 +209,14 @@
     const infoContainer = document.getElementById('uploadInfoContainer');
     infoContainer.innerHTML = ''; 
 
+    // 如果項目已上傳，撈取資料並加載四張圖片
     if (s.has_uploaded) {
       try {
         infoContainer.innerHTML = '<div style="color:var(--muted); font-size:13px; margin-top:16px;">正在讀取上傳審查資料...</div>';
         const simRes = await fetch('/api/simulation-data');
         const simData = await simRes.json();
         
+        // 渲染文字審查資料 + 圖片網格 (利用後端對 /local_data 的 StaticFiles 掛載)
         infoContainer.innerHTML = `
           <div class="upload-info-box">
             <div class="upload-info-title">📁 已確認上傳之商戶審查資訊</div>
@@ -266,13 +256,11 @@
 
   function confirmExecution(event, id, name) {
     event.stopPropagation();
-    
-    // 修改判斷邏輯：如果是 admin 則完全不受限；如果是普通 user 且未付費才進行阻擋
-    if (globalUserRole !== 'admin' && !globalUserIsPaid) {
+    // ──=== 新增：付費狀態檢查判斷 ===──
+    if (!globalUserIsPaid) {
       alert("⚠️ 您目前尚未付費開通，請先聯繫管理員完成付費後，方可執行此功能！");
-      return;
+      return; // 阻擋並直接結束，不往下走
     }
-    
     if(confirm(`準備執行商戶專案：【${name}】\n系統將轉至模擬執行畫面，是否繼續？`)) {
       window.location.href = `/execution/${id}`;
     }

@@ -149,7 +149,6 @@
 <script>
   let servicesData = [];
   let globalUserIsPaid = false;
-  let globalUserRole = ''; // 新增：用來記錄登入者的角色
 
   function toggleAccount() {
     const body = document.getElementById('accBody');
@@ -161,7 +160,6 @@
 
   fetch('/api/me').then(r=>r.json()).then(u => {
     globalUserIsPaid = u.is_paid; 
-    globalUserRole = u.role; // 儲存角色
     document.getElementById('userId').textContent = '#' + String(u.id).padStart(4,'0');
     document.getElementById('dispName').textContent = u.full_name || u.username;
     document.getElementById('dispEmail').textContent = u.email;
@@ -266,13 +264,10 @@
 
   function confirmExecution(event, id, name) {
     event.stopPropagation();
-    
-    // 修改判斷邏輯：如果是 admin 則完全不受限；如果是普通 user 且未付費才進行阻擋
-    if (globalUserRole !== 'admin' && !globalUserIsPaid) {
+    if (!globalUserIsPaid) {
       alert("⚠️ 您目前尚未付費開通，請先聯繫管理員完成付費後，方可執行此功能！");
       return;
     }
-    
     if(confirm(`準備執行商戶專案：【${name}】\n系統將轉至模擬執行畫面，是否繼續？`)) {
       window.location.href = `/execution/${id}`;
     }

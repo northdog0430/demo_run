@@ -99,24 +99,15 @@ def admin_page(request: Request, db: Session = Depends(get_db)):
         return HTMLResponse("<h2>403 - 無權限存取</h2>", status_code=403)
     return templates.TemplateResponse("admin.html", {"request": request, "user": user})
 
-# 執行模擬頁面 (已加入 Admin 與 付費狀態/專案權限 校驗)
+# 執行模擬頁面
 @app.get("/execution/{service_id}", response_class=HTMLResponse)
 def execution_page(request: Request, service_id: int, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
     if not user:
         return RedirectResponse(url="/login")
-        
     service = db.query(ServiceItem).filter(ServiceItem.id == service_id).first()
     if not service:
         return HTMLResponse("<h2>404 - 找不到服務項目</h2>", status_code=404)
-        
-    # ──=== 新增防護：非管理員身份時，進行付費與專案歸屬檢查 ===──
-    if user.role != RoleEnum.admin:
-        if not user.is_paid:
-            return HTMLResponse("<h2>403 - 尚未付費開通，無權限執行此功能</h2>", status_code=403)
-        if service.user_id != user.id:
-            return HTMLResponse("<h2>403 - 您無權限存取此客戶服務專案</h2>", status_code=403)
-            
     return templates.TemplateResponse("execution.html", {"request": request, "user": user, "service": service})
 
 # ─────────────────────────────────────────
@@ -147,7 +138,7 @@ def api_me(current_user: User = Depends(require_login)):
         "full_name": current_user.full_name, 
         "email": current_user.email, 
         "role": current_user.role,
-        "is_paid": current_user.is_paid,
+        "is_paid": current_user.is_paid, # ──=== 新增：回傳付費狀態 ===──
     }
 
 # ── 使用者 CRUD ──
@@ -208,7 +199,7 @@ def update_user(
 def list_services(db: Session = Depends(get_db), current_user: User = Depends(require_login)):
     query = db.query(ServiceItem)
     
-    # 如果不是管理員，只能看到綁定給自己的專案
+    # ──=== 新增：如果不是管理員，只能看到綁定給自己的專案 ===──
     if current_user.role != RoleEnum.admin:
         query = query.filter(ServiceItem.user_id == current_user.id)
         
@@ -248,17 +239,11 @@ def update_upload_status(
     service = db.query(ServiceItem).filter(ServiceItem.id == service_id).first()
     if not service: raise HTTPException(status_code=404, detail="找不到服務項目")
 
-    # ──=== 新增防護：非管理員進行 API 狀態提交時，也防禦未付費與越權操作 ===──
-    if current_user.role != RoleEnum.admin:
-        if not current_user.is_paid:
-            raise HTTPException(status_code=403, detail="尚未付費開通，無法執行此操作")
-        if service.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="無權限修改此專案狀態")
-
     if "has_uploaded" in data:
         service.has_uploaded = data["has_uploaded"]
         db.commit()
     return {"success": True}
+
 
 
 # ── 讀取本機模擬資料 API ──

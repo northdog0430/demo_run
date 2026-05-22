@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, Text, Date
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, Text, Date, ForeignKey
 from sqlalchemy.sql import func
 from database import Base
 import enum
@@ -19,6 +19,8 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    # ──=== 新增這一行：預設為未付費 ===──
+    is_paid = Column(Boolean, default=False)
 
 class ServiceItem(Base):
     __tablename__ = "services"
@@ -31,3 +33,5 @@ class ServiceItem(Base):
     published_date = Column(Date, nullable=False)             # 上架/建立日期
     has_uploaded = Column(Boolean, default=False)             # 資料是否已上傳 (新增)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    #user_id = Column(Integer, ForeignKey("users.id"), nullable=True) # ─── 2. 新增綁定使用者的外鍵 ───
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

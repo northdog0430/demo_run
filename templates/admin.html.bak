@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理後台 — 系統管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --surface: #12121a; --border: #1e1e2e; --border2: #252535;
+    --accent: #7c6af7; --accent-bright: #a394ff; --text: #e8e8f0; --muted: #6b6b85; 
+    --danger: #f77c7c; --success: #7cf7b8;
+  }
+  html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Noto Sans TC', sans-serif; }
+
+  nav { height: 60px; background: rgba(10,10,15,0.95); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; }
+  .btn { padding: 8px 18px; border-radius: 9px; font-size: 13px; cursor: pointer; border: none; font-family: 'Noto Sans TC'; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent-bright); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-danger { background: rgba(247,124,124,0.1); border: 1px solid rgba(247,124,124,0.3); color: var(--danger); }
+  
+  main { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+  
+  /* 頁籤 */
+  .tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .tab { padding: 10px 16px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font-size: 16px; }
+  .tab.active { color: var(--accent-bright); border-bottom-color: var(--accent); font-weight: 500; }
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeIn .3s ease; }
+  @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+
+  /* 表格共用 */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 14px 16px; text-align: left; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); }
+  td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid rgba(30,30,46,.5); }
+  
+  /* Modal 共用 */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 500; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 20px; padding: 32px; width: 480px; max-width: 90%; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .form-full { grid-column: 1 / -1; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 10px; background: #000; border: 1px solid var(--border2); color: #fff; border-radius: 8px; outline: none; }
+  .field input:focus, .field textarea:focus { border-color: var(--accent); }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+  
+  #toast { position: fixed; bottom: 28px; right: 28px; padding: 12px 20px; border-radius: 10px; transform: translateY(80px); opacity: 0; transition: all .3s; }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { background: rgba(124,247,184,.15); color: var(--success); }
+</style>
+</head>
+<body>
+<nav>
+  <div style="font-family:'Space Mono',monospace; font-size:14px; color:#fff">⚙️ ADMIN CENTER</div>
+  <button class="btn btn-outline" onclick="location.href='/dashboard'">返回儀表板</button>
+</nav>
+
+<main>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('user')" id="tabUser">👥 帳號管理</div>
+    <div class="tab" onclick="switchTab('svc')" id="tabSvc">📁 服務/商戶管理</div>
+  </div>
+
+  <div class="panel active" id="panelUser">
+    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+      <h2>系統帳號管理</h2>
+      <button class="btn btn-accent" onclick="openUserModal()">＋ 新增帳號</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>帳號/名稱</th><th>Email</th><th>角色</th><th>狀態</th><th>操作</th></tr></thead>
+        <tbody id="userTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel" id="panelSvc">
+    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+      <h2>客戶服務專案</h2>
+      <button class="btn btn-accent" onclick="openSvcModal()">＋ 新增專案</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>類別</th><th>專案名稱</th><th>商戶名稱</th><th>資料狀態</th><th>操作</th></tr></thead>
+        <tbody id="svcTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div class="overlay" id="userModal">
+  <div class="modal">
+    <h3 id="userTitle">新增帳號</h3>
+    <div class="form-grid">
+      <input type="hidden" id="uId">
+      <div class="field"><label>帳號</label><input type="text" id="uName"></div>
+      <div class="field"><label>密碼 <small style="color:#666" id="uPwHint">(留空不改)</small></label><input type="password" id="uPw"></div>
+      <div class="field form-full"><label>Email</label><input type="email" id="uEmail"></div>
+      <div class="field form-full"><label>全名</label><input type="text" id="uFullName"></div>
+      <div class="field"><label>角色</label><select id="uRole"><option value="user">一般</option><option value="admin">管理員</option></select></div>
+      <div class="field"><label>狀態</label><select id="uActive"><option value="true">啟用</option><option value="false">停用</option></select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('userModal')">取消</button>
+      <button class="btn btn-accent" onclick="saveUser()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="svcModal">
+  <div class="modal">
+    <h3 id="svcTitle">新增專案</h3>
+    <div class="form-grid">
+      <input type="hidden" id="sId">
+      <div class="field"><label>服務類別</label><input type="text" id="sCat" placeholder="網站、行銷..."></div>
+      <div class="field"><label>專案名稱</label><input type="text" id="sName" placeholder="服務名稱"></div>
+      <div class="field"><label>商戶名稱</label><input type="text" id="sMerchant" placeholder="客戶公司名"></div>
+      <div class="field"><label>上架日期</label><input type="date" id="sDate"></div>
+      <div class="field form-full"><label>服務說明</label><textarea id="sDesc" rows="3"></textarea></div>
+      <div class="field"><label>上傳狀態</label><select id="sStatus"><option value="false">未上傳</option><option value="true">已上傳</option></select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('svcModal')">取消</button>
+      <button class="btn btn-accent" onclick="saveSvc()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let users = [];
+  let services = [];
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'show success';
+    setTimeout(() => t.className = '', 3000);
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+    document.getElementById(`panel${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
+  }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  // --- User CRUD ---
+  async function loadUsers() {
+    const res = await fetch('/api/users');
+    users = await res.json();
+    document.getElementById('userTbody').innerHTML = users.map(u => `
+      <tr>
+        <td><b>${u.username}</b><br><small style="color:var(--muted)">${u.full_name||''}</small></td>
+        <td>${u.email}</td><td>${u.role}</td>
+        <td style="color:${u.is_active?'var(--success)':'var(--muted)'}">${u.is_active?'啟用':'停用'}</td>
+        <td>
+          <button class="btn btn-outline" onclick="openUserModal(${u.id})">編輯</button>
+          <button class="btn btn-danger" onclick="delUser(${u.id})">刪除</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+  function openUserModal(id=null) {
+    const u = users.find(x => x.id === id) || {};
+    document.getElementById('userTitle').textContent = id ? '編輯帳號' : '新增帳號';
+    document.getElementById('uId').value = id || '';
+    document.getElementById('uName').value = u.username || '';
+    document.getElementById('uName').disabled = !!id;
+    document.getElementById('uPw').value = '';
+    document.getElementById('uPwHint').style.display = id ? 'inline' : 'none';
+    document.getElementById('uEmail').value = u.email || '';
+    document.getElementById('uFullName').value = u.full_name || '';
+    document.getElementById('uRole').value = u.role || 'user';
+    document.getElementById('uActive').value = u.is_active !== false ? 'true' : 'false';
+    document.getElementById('userModal').classList.add('open');
+  }
+  async function saveUser() {
+    const id = document.getElementById('uId').value;
+    const payload = {
+      email: document.getElementById('uEmail').value,
+      full_name: document.getElementById('uFullName').value,
+      role: document.getElementById('uRole').value,
+      is_active: document.getElementById('uActive').value === 'true'
+    };
+    const pw = document.getElementById('uPw').value;
+    if(pw) payload.password = pw;
+    if(!id) payload.username = document.getElementById('uName').value;
+
+    await fetch(id ? `/api/users/${id}` : '/api/users', {
+      method: id ? 'PUT' : 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    closeModal('userModal'); toast('帳號儲存成功'); loadUsers();
+  }
+  async function delUser(id) {
+    if(confirm('確定刪除此帳號？')) {
+      await fetch(`/api/users/${id}`, { method: 'DELETE' });
+      toast('帳號已刪除'); loadUsers();
+    }
+  }
+
+  // --- Service CRUD ---
+  async function loadSvcs() {
+    const res = await fetch('/api/services');
+    services = await res.json();
+    document.getElementById('svcTbody').innerHTML = services.map(s => `
+      <tr>
+        <td>${s.category}</td><td><b>${s.name}</b></td>
+        <td>${s.merchant_name || '<span style="color:var(--muted)">未設定</span>'}</td>
+        <td style="color:${s.has_uploaded?'var(--success)':'var(--warn)'}">${s.has_uploaded?'已上傳':'未上傳'}</td>
+        <td>
+          <button class="btn btn-outline" onclick="openSvcModal(${s.id})">編輯</button>
+          <button class="btn btn-danger" onclick="delSvc(${s.id})">刪除</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+  function openSvcModal(id=null) {
+    const s = services.find(x => x.id === id) || {};
+    document.getElementById('svcTitle').textContent = id ? '編輯專案' : '新增專案';
+    document.getElementById('sId').value = id || '';
+    document.getElementById('sCat').value = s.category || '';
+    document.getElementById('sName').value = s.name || '';
+    document.getElementById('sMerchant').value = s.merchant_name || '';
+    document.getElementById('sDesc').value = s.description || '';
+    document.getElementById('sDate').value = s.published_date || new Date().toISOString().split('T')[0];
+    document.getElementById('sStatus').value = s.has_uploaded === true ? 'true' : 'false';
+    document.getElementById('svcModal').classList.add('open');
+  }
+  async function saveSvc() {
+    const id = document.getElementById('sId').value;
+    const payload = {
+      category: document.getElementById('sCat').value,
+      name: document.getElementById('sName').value,
+      merchant_name: document.getElementById('sMerchant').value,
+      description: document.getElementById('sDesc').value,
+      published_date: document.getElementById('sDate').value,
+      has_uploaded: document.getElementById('sStatus').value === 'true'
+    };
+    await fetch(id ? `/api/services/${id}` : '/api/services', {
+      method: id ? 'PUT' : 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    closeModal('svcModal'); toast('專案儲存成功'); loadSvcs();
+  }
+  async function delSvc(id) {
+    if(confirm('確定刪除此專案？')) {
+      await fetch(`/api/services/${id}`, { method: 'DELETE' });
+      toast('專案已刪除'); loadSvcs();
+    }
+  }
+
+  loadUsers(); loadSvcs();
+</script>
+</body>
+</html>

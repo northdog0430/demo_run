@@ -371,6 +371,7 @@
     const res = await fetch('/api/users');
     cachedUsers = await res.json();
     document.getElementById('tab-badge-users').textContent = cachedUsers.length;
+    populateServiceUserSelect();
     updateServiceUserFilter();
     renderUsers();
   }
@@ -562,6 +563,7 @@
 
   function openServiceModal(id) {
     resetServiceForm();
+    populateServiceUserSelect();
     if(id) {
       const s = cachedServices.find(x => x.id === id);
       if(!s) return;

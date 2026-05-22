@@ -8,81 +8,277 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0a0a0f; --surface: #12121a; --border: #252535;
-    --accent: #7c6af7; --accent-bright: #a394ff; 
+    --bg: #0a0a0f; --surface: #12121a; --surface2: #17171f; --border: #252535;
+    --accent: #7c6af7; --accent-bright: #a394ff;
     --text: #e8e8f0; --muted: #8b8b9d; --success: #7cf7b8; --warn: #f7d47c;
     --danger: #f77c7c;
   }
   html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Noto Sans TC', sans-serif; font-weight: 300; }
 
+  /* ── NAV ── */
   nav {
-    position: sticky; top: 0; z-index: 100; height: 60px;
-    background: rgba(10,10,15,0.9); border-bottom: 1px solid var(--border); backdrop-filter: blur(12px);
-    display: flex; align-items: center; justify-content: space-between; padding: 0 32px;
+    position: sticky; top: 0; z-index: 200; height: 56px;
+    background: rgba(10,10,15,0.92); border-bottom: 1px solid var(--border); backdrop-filter: blur(16px);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 28px;
   }
-  .nav-logo { display: flex; align-items: center; gap: 10px; font-family: 'Space Mono', monospace; font-size: 14px; font-weight:700; color: #fff; letter-spacing: 1px; }
-  .logo-dot { width: 8px; height: 8px; background: var(--danger); border-radius: 50%; box-shadow: 0 0 10px var(--danger); }
-  
-  main { max-width: 1400px; margin: 0 auto; padding: 40px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
-  
-  @media (max-width: 1024px) {
-    main { grid-template-columns: 1fr; }
-  }
+  .nav-logo { display: flex; align-items: center; gap: 10px; font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+  .logo-dot { width: 7px; height: 7px; background: var(--danger); border-radius: 50%; box-shadow: 0 0 8px var(--danger); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-  .panel-title { font-size: 18px; font-weight: 500; margin-bottom: 20px; color: var(--accent-bright); display: flex; justify-content: space-between; align-items: center; }
-  
-  .btn-sm { padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; border: none; transition: all .2s; font-weight: 400; }
+  /* ── MAIN ── */
+  main { max-width: 1320px; margin: 0 auto; padding: 28px 20px; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 5px; width: fit-content; }
+  .tab-btn {
+    padding: 7px 22px; border-radius: 7px; border: none; background: transparent;
+    color: var(--muted); font-size: 13px; font-family: inherit; cursor: pointer; transition: all .2s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .tab-btn.active { background: var(--accent); color: #fff; font-weight: 500; box-shadow: 0 2px 12px rgba(124,106,247,0.4); }
+  .tab-btn:not(.active):hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  .tab-badge { background: rgba(255,255,255,0.18); border-radius: 20px; padding: 1px 7px; font-size: 11px; }
+  .tab-btn.active .tab-badge { background: rgba(255,255,255,0.25); }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── PANEL ── */
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+
+  .panel-header {
+    padding: 16px 20px; display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border); background: var(--surface2);
+  }
+  .panel-header h2 { font-size: 15px; font-weight: 500; color: var(--accent-bright); flex: 1; }
+
+  /* ── TOOLBAR ── */
+  .toolbar { padding: 12px 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 320px; }
+  .search-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); opacity: .4; pointer-events: none; }
+  .search-input {
+    width: 100%; background: #07070a; border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 12px 7px 34px; color: var(--text); font-size: 13px; font-family: inherit;
+    transition: border-color .2s;
+  }
+  .search-input:focus { outline: none; border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .filter-select {
+    background: #07070a; border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 12px; color: var(--text); font-size: 13px; font-family: inherit; cursor: pointer;
+  }
+  .filter-select:focus { outline: none; border-color: var(--accent); }
+
+  /* ── TABLE ── */
+  .table-container { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    padding: 10px 16px; color: var(--muted); background: rgba(255,255,255,0.02);
+    font-weight: 400; text-align: left; white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+  }
+  td { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+  tbody tr { transition: background .15s; }
+  tbody tr:hover { background: rgba(255,255,255,0.025); }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .cell-primary { font-weight: 500; color: var(--text); }
+  .cell-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ── PAGINATION ── */
+  .pagination {
+    padding: 12px 20px; display: flex; align-items: center; gap: 6px; justify-content: flex-end;
+    border-top: 1px solid var(--border); background: var(--surface2);
+  }
+  .page-info { font-size: 12px; color: var(--muted); margin-right: auto; }
+  .page-btn {
+    width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--text); font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all .15s;
+  }
+  .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-bright); }
+  .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .page-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+  /* ── BADGES ── */
+  .badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap; }
+  .badge-paid   { background: rgba(124,247,184,.1); color: var(--success); border: 1px solid rgba(124,247,184,.2); }
+  .badge-unpaid { background: rgba(247,212,124,.1); color: var(--warn);    border: 1px solid rgba(247,212,124,.2); }
+  .badge-user   { background: rgba(100,200,255,.1); color: #64c8ff; }
+  .badge-admin  { background: rgba(124,106,247,.15); color: var(--accent-bright); }
+
+  /* ── BUTTONS ── */
+  .btn { padding: 7px 16px; border-radius: 7px; font-size: 13px; cursor: pointer; border: none; transition: all .2s; font-family: inherit; font-weight: 400; display: inline-flex; align-items: center; gap: 5px; }
   .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
   .btn-outline:hover { border-color: var(--accent); color: var(--accent-bright); }
-  .btn-accent { background: linear-gradient(135deg, var(--accent), #9b8dff); color: #fff; }
-  .btn-danger { background: rgba(247,124,124,0.1); border: 1px solid rgba(247,124,124,0.3); color: var(--danger); }
-  .btn-danger:hover { background: var(--danger); color: #fff; }
+  .btn-accent { background: linear-gradient(135deg, var(--accent), #9b8dff); color: #fff; box-shadow: 0 2px 10px rgba(124,106,247,.3); }
+  .btn-accent:hover { box-shadow: 0 4px 16px rgba(124,106,247,.5); transform: translateY(-1px); }
+  .btn-danger-ghost { background: rgba(247,124,124,.08); border: 1px solid rgba(247,124,124,.25); color: var(--danger); }
+  .btn-danger-ghost:hover { background: var(--danger); color: #fff; }
+  .btn-xs { padding: 4px 10px; font-size: 12px; border-radius: 5px; }
 
-  /* 表單樣式 */
-  .form-group { margin-bottom: 16px; }
-  .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-  .form-control { width: 100%; background: #07070a; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 14px; font-family: inherit; transition: border-color 0.2s; }
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,.65); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid rgba(124,106,247,.35); border-radius: 16px;
+    width: 100%; max-width: 560px; box-shadow: 0 24px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.05);
+    transform: translateY(12px) scale(.98); transition: transform .2s;
+    max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+  .modal-head {
+    padding: 18px 22px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-head h3 { font-size: 15px; font-weight: 500; color: var(--accent-bright); }
+  .modal-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: 4px; }
+  .modal-close:hover { color: var(--text); background: rgba(255,255,255,.06); }
+  .modal-body { padding: 22px; overflow-y: auto; flex: 1; }
+  .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; background: var(--surface2); }
+
+  /* ── FORM ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid.full { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 12px; color: var(--muted); letter-spacing: .3px; }
+  .form-group label.accent { color: var(--accent-bright); font-size: 12px; }
+  .form-control {
+    width: 100%; background: #07070a; border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 12px; color: var(--text); font-size: 14px; font-family: inherit; transition: border-color .2s;
+  }
   .form-control:focus { outline: none; border-color: var(--accent); }
-  
-  /* 表格樣式 */
-  .table-wrap { overflow-x: auto; margin-top: 16px; border: 1px solid var(--border); border-radius: 8px; background: #07070a; }
-  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-  th { padding: 12px 16px; color: var(--muted); background: rgba(255,255,255,0.02); font-weight: 400; }
-  td { padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.05); color: var(--text); vertical-align: middle; }
-  
-  .badge { padding: 2px 6px; border-radius: 4px; font-size: 11px; }
-  .badge-paid { background: rgba(124,247,184,0.1); color: var(--success); border: 1px solid rgba(124,247,184,0.2); }
-  .badge-unpaid { background: rgba(247,212,124,0.1); color: var(--warn); border: 1px solid rgba(247,212,124,0.2); }
-  .badge-user { background: rgba(100,200,255,0.1); color: #64c8ff; }
+  .form-control.accent-border { border-color: rgba(124,106,247,.4); }
+  textarea.form-control { resize: vertical; min-height: 72px; }
+  .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 8px 0; }
+  .checkbox-label input { accent-color: var(--accent); width: 15px; height: 15px; }
 
-  .flex-actions { display: flex; gap: 6px; justify-content: flex-end; }
+  /* ── EMPTY STATE ── */
+  .empty-state { padding: 48px 20px; text-align: center; color: var(--muted); font-size: 13px; }
+  .empty-icon { font-size: 32px; margin-bottom: 10px; opacity: .5; }
+
+  /* ── ROW ACTIONS ── */
+  .row-actions { display: flex; gap: 5px; justify-content: flex-end; opacity: 0; transition: opacity .15s; }
+  tbody tr:hover .row-actions { opacity: 1; }
 </style>
 </head>
 <body>
 
 <nav>
   <div class="nav-logo"><div class="logo-dot"></div>後台安全管理系統 [ADMIN]</div>
-  <button class="btn-sm btn-outline" onclick="location.href='/dashboard'">返回大廳</button>
+  <button class="btn btn-outline" style="padding: 5px 14px; font-size: 13px;" onclick="location.href='/dashboard'">返回大廳</button>
 </nav>
 
 <main>
-  <div class="panel">
-    <div class="panel-title">👥 客戶帳號名冊 <span style="font-size: 12px; color: var(--muted);" id="userCount">共 0 人</span></div>
-    
-    <div style="background: rgba(255,255,255,0.01); border: 1px solid var(--border); padding: 16px; border-radius: 10px; margin-bottom: 20px;">
-      <input type="hidden" id="targetUserId" value="">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('users')" id="tab-users">
+      👥 客戶帳號名冊 <span class="tab-badge" id="tab-badge-users">0</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('services')" id="tab-services">
+      🛠️ 服務 / 專案管理 <span class="tab-badge" id="tab-badge-services">0</span>
+    </button>
+  </div>
+
+  <!-- ══ TAB: USERS ══ -->
+  <div class="tab-panel active" id="panel-users">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>👥 客戶帳號名冊</h2>
+        <button class="btn btn-accent" onclick="openUserModal()">＋ 新增帳號</button>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" class="search-input" id="userSearch" placeholder="搜尋帳號、姓名、Email..." oninput="renderUsers()">
+        </div>
+        <select class="filter-select" id="userFilter" onchange="renderUsers()">
+          <option value="">全部狀態</option>
+          <option value="paid">已開通</option>
+          <option value="unpaid">未開通</option>
+        </select>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:48px">ID</th>
+              <th>帳號</th>
+              <th>真實姓名</th>
+              <th>Email</th>
+              <th>付費狀態</th>
+              <th style="text-align:right; width:120px">操作</th>
+            </tr>
+          </thead>
+          <tbody id="usersTbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="userPagination"></div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: SERVICES ══ -->
+  <div class="tab-panel" id="panel-services">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>🛠️ 服務項目 / 商戶專案管理</h2>
+        <button class="btn btn-accent" onclick="openServiceModal()">＋ 新增專案</button>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" class="search-input" id="serviceSearch" placeholder="搜尋專案名稱、類別、商戶..." oninput="renderServices()">
+        </div>
+        <select class="filter-select" id="serviceUserFilter" onchange="renderServices()">
+          <option value="">全部歸屬</option>
+          <option value="unbound">未綁定</option>
+        </select>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>專案名稱</th>
+              <th>服務類別</th>
+              <th>歸屬商戶</th>
+              <th>綁定客戶</th>
+              <th>建檔日期</th>
+              <th style="text-align:right; width:120px">操作</th>
+            </tr>
+          </thead>
+          <tbody id="servicesTbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="servicePagination"></div>
+    </div>
+  </div>
+</main>
+
+<!-- ══ MODAL: USER ══ -->
+<div class="modal-overlay" id="userModal" onclick="closeModal('userModal', event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="userModalTitle">新增客戶帳號</h3>
+      <button class="modal-close" onclick="closeModal('userModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="targetUserId">
+      <div class="form-grid">
         <div class="form-group">
           <label>登入帳號</label>
           <input type="text" id="uUsername" class="form-control" placeholder="例如: user01">
         </div>
         <div class="form-group">
-          <label>密碼 (新增必填/修改不填代表不更動)</label>
+          <label>密碼 (修改時不填 = 不更動)</label>
           <input type="password" id="uPassword" class="form-control" placeholder="••••••••">
         </div>
-      </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div class="form-group">
           <label>真實姓名 / 商戶代表</label>
           <input type="text" id="uFullName" class="form-control" placeholder="姓名">
@@ -92,36 +288,27 @@
           <input type="email" id="uEmail" class="form-control" placeholder="email@example.com">
         </div>
       </div>
-      <div style="display: flex; gap: 20px; align-items: center; margin-top: 6px;">
-        <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
-          <input type="checkbox" id="uIsPaid"> 開通付費權限 (可執行專案)
-        </label>
-        <button class="btn-sm btn-accent" style="margin-left: auto;" id="btnSaveUser" onclick="saveUser()">儲存使用者資料</button>
-        <button class="btn-sm btn-outline" id="btnCancelUserEdit" onclick="resetUserForm()" style="display:none;">取消</button>
-      </div>
+      <label class="checkbox-label" style="margin-top: 8px;">
+        <input type="checkbox" id="uIsPaid"> 開通付費權限（可執行專案）
+      </label>
     </div>
-
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>帳號 / 姓名</th>
-            <th>付費狀態</th>
-            <th style="text-align:right">操作</th>
-          </tr>
-        </thead>
-        <tbody id="usersTbody"></tbody>
-      </table>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('userModal')">取消</button>
+      <button class="btn btn-accent" onclick="saveUser()">儲存使用者資料</button>
     </div>
   </div>
+</div>
 
-  <div class="panel">
-    <div class="panel-title">🛠️ 服務項目 / 商戶專案管理 <span style="font-size: 12px; color: var(--muted);" id="serviceCount">共 0 項</span></div>
-    
-    <div style="background: rgba(255,255,255,0.01); border: 1px solid var(--border); padding: 16px; border-radius: 10px; margin-bottom: 20px;">
-      <input type="hidden" id="targetServiceId" value="">
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+<!-- ══ MODAL: SERVICE ══ -->
+<div class="modal-overlay" id="serviceModal" onclick="closeModal('serviceModal', event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="serviceModalTitle">新增服務專案</h3>
+      <button class="modal-close" onclick="closeModal('serviceModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="targetServiceId">
+      <div class="form-grid">
         <div class="form-group">
           <label>服務類別</label>
           <input type="text" id="sCategory" class="form-control" placeholder="例如: 基礎設定, 核心系統">
@@ -130,8 +317,6 @@
           <label>專案名稱</label>
           <input type="text" id="sName" class="form-control" placeholder="輸入功能或服務名稱">
         </div>
-      </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div class="form-group">
           <label>商戶對應名稱</label>
           <input type="text" id="sMerchantName" class="form-control" placeholder="例如: 某某企業社">
@@ -141,131 +326,120 @@
           <input type="date" id="sPublishedDate" class="form-control">
         </div>
       </div>
-      
-      <div class="form-group">
-        <label style="color: var(--accent-bright); font-weight: 500;">🔗 綁定指定客戶帳號 (只有被綁定的客戶才能在儀表板看到此專案)</label>
-        <select id="sUserId" class="form-control" style="border-color: rgba(124,106,247,0.4);">
+      <div class="form-group" style="margin-top: 14px;">
+        <label class="accent">🔗 綁定指定客戶帳號（只有被綁定的客戶才能看到此專案）</label>
+        <select id="sUserId" class="form-control accent-border">
           <option value="">-- 公開 / 不綁定特定客戶 --</option>
         </select>
       </div>
-
-      <div class="form-group">
+      <div class="form-group" style="margin-top: 14px;">
         <label>專案描述說明</label>
-        <textarea id="sDescription" class="form-control" rows="2" placeholder="輸入專案備註或流程指引..."></textarea>
-      </div>
-      
-      <div style="display: flex; justify-content: flex-end; gap: 10px;">
-        <button class="btn-sm btn-outline" id="btnCancelServiceEdit" onclick="resetServiceForm()" style="display:none;">取消編輯</button>
-        <button class="btn-sm btn-accent" onclick="saveService()">發布 / 更新專案</button>
+        <textarea id="sDescription" class="form-control" placeholder="輸入專案備註或流程指引..."></textarea>
       </div>
     </div>
-
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>專案名稱</th>
-            <th>歸屬商戶</th>
-            <th>綁定客戶</th>
-            <th style="text-align:right">操作</th>
-          </tr>
-        </thead>
-        <tbody id="servicesTbody"></tbody>
-      </table>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('serviceModal')">取消</button>
+      <button class="btn btn-accent" onclick="saveService()">發布 / 更新專案</button>
     </div>
   </div>
-</main>
+</div>
 
 <script>
-  let cachedUsers = [];
-  let cachedServices = [];
+  const PAGE_SIZE = 10;
+  let cachedUsers = [], cachedServices = [];
+  let userPage = 1, servicePage = 1;
 
-  // 初始化今日日期
   document.getElementById('sPublishedDate').value = new Date().toISOString().split('T')[0];
 
-  // 1. 讀取並渲染使用者名冊與服務選單
+  // ── TABS ──
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+  }
+
+  // ── MODAL ──
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id, e) {
+    if(e && e.target !== document.getElementById(id)) return;
+    document.getElementById(id).classList.remove('open');
+  }
+
+  // ── USERS ──
   async function fetchUsers() {
     const res = await fetch('/api/users');
     cachedUsers = await res.json();
-    
-    document.getElementById('userCount').textContent = `共 ${cachedUsers.length} 人`;
-    
-    // 渲染表格
+    document.getElementById('tab-badge-users').textContent = cachedUsers.length;
+    updateServiceUserFilter();
+    renderUsers();
+  }
+
+  function getFilteredUsers() {
+    const q = document.getElementById('userSearch').value.toLowerCase();
+    const f = document.getElementById('userFilter').value;
+    return cachedUsers.filter(u => {
+      const matchQ = !q || u.username.toLowerCase().includes(q)
+        || (u.full_name||'').toLowerCase().includes(q)
+        || (u.email||'').toLowerCase().includes(q);
+      const matchF = !f
+        || (f === 'paid' && u.is_paid)
+        || (f === 'unpaid' && !u.is_paid);
+      return matchQ && matchF;
+    });
+  }
+
+  function renderUsers() {
+    const filtered = getFilteredUsers();
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if(userPage > totalPages) userPage = totalPages;
+    const slice = filtered.slice((userPage-1)*PAGE_SIZE, userPage*PAGE_SIZE);
+
     const tbody = document.getElementById('usersTbody');
-    tbody.innerHTML = cachedUsers.map(u => `
-      <tr>
-        <td>${u.id}</td>
-        <td>
-          <div style="font-weight:500;">${u.username}</div>
-          <div style="font-size:11px; color:var(--muted);">${u.full_name || '未填寫姓名'}</div>
-        </td>
-        <td>${u.is_paid ? '<span class="badge badge-paid">已開通</span>' : '<span class="badge badge-unpaid">未開通</span>'}</td>
-        <td class="flex-actions">
-          <button class="btn-sm btn-outline" onclick="editUser(${u.id})">編輯</button>
-          <button class="btn-sm btn-danger" onclick="deleteUser(${u.id})">刪除</button>
-        </td>
-      </tr>
-    `).join('');
-
-    // 動態更新專案表單中的「客戶綁定下拉選單」
-    const select = document.getElementById('sUserId');
-    select.innerHTML = '<option value="">-- 公開 / 不綁定特定客戶 --</option>';
-    cachedUsers.forEach(u => {
-      if(u.role !== 'admin') {
-        const opt = document.createElement('option');
-        opt.value = u.id;
-        opt.textContent = `${u.username} (${u.full_name || '未具名'})`;
-        select.appendChild(opt);
-      }
-    });
-  }
-
-  // 2. 儲存/修改使用者
-  async function saveUser() {
-    const id = document.getElementById('targetUserId').value;
-    const payload = {
-      username: document.getElementById('uUsername').value.trim(),
-      email: document.getElementById('uEmail').value.trim(),
-      full_name: document.getElementById('uFullName').value.trim(),
-      is_paid: document.getElementById('uIsPaid').checked,
-      is_active: true,
-      role: 'user'
-    };
-    
-    const pwd = document.getElementById('uPassword').value;
-    if(pwd) payload.password = pwd;
-    if(!id && !pwd) { alert('新增帳號時必須填寫密碼！'); return; }
-
-    const url = id ? `/api/users/${id}` : '/api/users';
-    const method = id ? 'PUT' : 'POST';
-
-    const res = await fetch(url, {
-      method: method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if(res.ok) {
-      resetUserForm();
-      fetchUsers();
-      fetchServices(); // 重新讀取專案以更新歸屬名稱顯示
+    if(!slice.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🔍</div>沒有符合的帳號</div></td></tr>`;
     } else {
-      const err = await res.json();
-      alert(`操作失敗: ${err.detail}`);
+      tbody.innerHTML = slice.map(u => `
+        <tr>
+          <td style="color:var(--muted)">${u.id}</td>
+          <td>
+            <div class="cell-primary">${u.username}</div>
+            ${u.role === 'admin' ? '<span class="badge badge-admin" style="margin-top:3px;display:inline-block;">admin</span>' : ''}
+          </td>
+          <td>${u.full_name || '<span style="color:var(--muted)">—</span>'}</td>
+          <td style="color:var(--muted); font-size:12px;">${u.email || '—'}</td>
+          <td>${u.is_paid ? '<span class="badge badge-paid">已開通</span>' : '<span class="badge badge-unpaid">未開通</span>'}</td>
+          <td><div class="row-actions">
+            <button class="btn btn-outline btn-xs" onclick="editUser(${u.id})">編輯</button>
+            <button class="btn btn-danger-ghost btn-xs" onclick="deleteUser(${u.id})">刪除</button>
+          </div></td>
+        </tr>
+      `).join('');
     }
+
+    renderPagination('userPagination', userPage, totalPages, total, (p) => { userPage = p; renderUsers(); });
   }
 
-  function editUser(id) {
-    const u = cachedUsers.find(x => x.id === id);
-    if(!u) return;
-    document.getElementById('targetUserId').value = u.id;
-    document.getElementById('uUsername').value = u.username;
-    document.getElementById('uUsername').disabled = true; // 帳號不開放修改
-    document.getElementById('uEmail').value = u.email;
-    document.getElementById('uFullName').value = u.full_name || '';
-    document.getElementById('uIsPaid').checked = u.is_paid;
-    document.getElementById('btnCancelUserEdit').style.display = 'inline-block';
+  function openUserModal(id) {
+    resetUserForm();
+    if(id) {
+      const u = cachedUsers.find(x => x.id === id);
+      if(!u) return;
+      document.getElementById('userModalTitle').textContent = '編輯客戶帳號';
+      document.getElementById('targetUserId').value = u.id;
+      document.getElementById('uUsername').value = u.username;
+      document.getElementById('uUsername').disabled = true;
+      document.getElementById('uEmail').value = u.email || '';
+      document.getElementById('uFullName').value = u.full_name || '';
+      document.getElementById('uIsPaid').checked = u.is_paid;
+    } else {
+      document.getElementById('userModalTitle').textContent = '新增客戶帳號';
+    }
+    openModal('userModal');
   }
+
+  function editUser(id) { openUserModal(id); }
 
   function resetUserForm() {
     document.getElementById('targetUserId').value = '';
@@ -275,93 +449,137 @@
     document.getElementById('uEmail').value = '';
     document.getElementById('uFullName').value = '';
     document.getElementById('uIsPaid').checked = false;
-    document.getElementById('btnCancelUserEdit').style.display = 'none';
+  }
+
+  async function saveUser() {
+    const id = document.getElementById('targetUserId').value;
+    const payload = {
+      username: document.getElementById('uUsername').value.trim(),
+      email: document.getElementById('uEmail').value.trim(),
+      full_name: document.getElementById('uFullName').value.trim(),
+      is_paid: document.getElementById('uIsPaid').checked,
+      is_active: true, role: 'user'
+    };
+    const pwd = document.getElementById('uPassword').value;
+    if(pwd) payload.password = pwd;
+    if(!id && !pwd) { alert('新增帳號時必須填寫密碼！'); return; }
+
+    const url = id ? `/api/users/${id}` : '/api/users';
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+
+    if(res.ok) {
+      closeModal('userModal');
+      await fetchUsers();
+      await fetchServices();
+    } else {
+      const err = await res.json();
+      alert(`操作失敗: ${err.detail}`);
+    }
   }
 
   async function deleteUser(id) {
     if(confirm('確定要刪除此客戶帳號嗎？其綁定的專案將會變為未指派狀態。')) {
       await fetch(`/api/users/${id}`, { method: 'DELETE' });
-      fetchUsers();
-      fetchServices();
+      await fetchUsers();
+      await fetchServices();
     }
   }
 
-  // 3. 讀取並渲染服務專案
+  // ── SERVICES ──
   async function fetchServices() {
     const res = await fetch('/api/services');
     cachedServices = await res.json();
-    document.getElementById('serviceCount').textContent = `共 ${cachedServices.length} 項`;
+    document.getElementById('tab-badge-services').textContent = cachedServices.length;
+    renderServices();
+  }
+
+  function updateServiceUserFilter() {
+    const sel = document.getElementById('serviceUserFilter');
+    const curVal = sel.value;
+    // keep "全部" and "未綁定", add users
+    while(sel.options.length > 2) sel.remove(2);
+    cachedUsers.filter(u => u.role !== 'admin').forEach(u => {
+      const o = document.createElement('option');
+      o.value = 'user_' + u.id;
+      o.textContent = u.username + (u.full_name ? ` (${u.full_name})` : '');
+      sel.appendChild(o);
+    });
+    sel.value = curVal;
+  }
+
+  function getFilteredServices() {
+    const q = document.getElementById('serviceSearch').value.toLowerCase();
+    const f = document.getElementById('serviceUserFilter').value;
+    return cachedServices.filter(s => {
+      const matchQ = !q
+        || s.name.toLowerCase().includes(q)
+        || (s.category||'').toLowerCase().includes(q)
+        || (s.merchant_name||'').toLowerCase().includes(q);
+      const matchF = !f
+        || (f === 'unbound' && !s.user_id)
+        || (f.startsWith('user_') && s.user_id === parseInt(f.replace('user_','')));
+      return matchQ && matchF;
+    });
+  }
+
+  function renderServices() {
+    const filtered = getFilteredServices();
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if(servicePage > totalPages) servicePage = totalPages;
+    const slice = filtered.slice((servicePage-1)*PAGE_SIZE, servicePage*PAGE_SIZE);
 
     const tbody = document.getElementById('servicesTbody');
-    tbody.innerHTML = cachedServices.map(s => {
-      // 找出綁定的使用者名稱
-      const owner = cachedUsers.find(u => u.id === s.user_id);
-      const ownerText = owner ? `<span class="badge badge-user">👤 ${owner.username}</span>` : '<span style="color:var(--muted)">未綁定 (全體可看)</span>';
-      
-      return `
-        <tr>
-          <td>
-            <div style="font-weight:500;">${s.name}</div>
-            <div style="font-size:11px; color:var(--muted);">${s.category}</div>
-          </td>
-          <td>${s.merchant_name || '—'}</td>
-          <td>${ownerText}</td>
-          <td class="flex-actions">
-            <button class="btn-sm btn-outline" onclick="editService(${s.id})">編輯</button>
-            <button class="btn-sm btn-danger" onclick="deleteService(${s.id})">刪除</button>
-          </td>
-        </tr>
-      `;
-    }).join('');
-  }
-
-  // 4. 新增/修改服務專案
-  async function saveService() {
-    const id = document.getElementById('targetServiceId').value;
-    const boundUserId = document.getElementById('sUserId').value;
-    
-    const payload = {
-      category: document.getElementById('sCategory').value.trim(),
-      name: document.getElementById('sName').value.trim(),
-      merchant_name: document.getElementById('sMerchantName').value.trim() || null,
-      published_date: document.getElementById('sPublishedDate').value,
-      description: document.getElementById('sDescription').value.trim() || null,
-      has_uploaded: false,
-      // ──=== 將選單選到的 User ID 轉成數字包進 Payload 送向後端 ===──
-      user_id: boundUserId ? parseInt(boundUserId) : null
-    };
-
-    if(!payload.category || !payload.name) { alert('請填寫服務類別與專案名稱！'); return; }
-
-    const url = id ? `/api/services/${id}` : '/api/services';
-    const method = id ? 'PUT' : 'POST';
-
-    const res = await fetch(url, {
-      method: method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if(res.ok) {
-      resetServiceForm();
-      fetchServices();
+    if(!slice.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">🔍</div>沒有符合的專案</div></td></tr>`;
     } else {
-      alert('儲存服務專案失敗，請檢查輸入內容。');
+      tbody.innerHTML = slice.map(s => {
+        const owner = cachedUsers.find(u => u.id === s.user_id);
+        const ownerText = owner
+          ? `<span class="badge badge-user">👤 ${owner.username}</span>`
+          : '<span style="color:var(--muted);font-size:12px;">未綁定</span>';
+        return `
+          <tr>
+            <td>
+              <div class="cell-primary">${s.name}</div>
+              ${s.description ? `<div class="cell-sub">${s.description.substring(0,40)}${s.description.length>40?'…':''}</div>` : ''}
+            </td>
+            <td><span class="badge" style="background:rgba(255,255,255,.05);color:var(--muted)">${s.category||'—'}</span></td>
+            <td style="font-size:13px;">${s.merchant_name || '<span style="color:var(--muted)">—</span>'}</td>
+            <td>${ownerText}</td>
+            <td style="color:var(--muted);font-size:12px;">${s.published_date || '—'}</td>
+            <td><div class="row-actions">
+              <button class="btn btn-outline btn-xs" onclick="editService(${s.id})">編輯</button>
+              <button class="btn btn-danger-ghost btn-xs" onclick="deleteService(${s.id})">刪除</button>
+            </div></td>
+          </tr>`;
+      }).join('');
     }
+
+    renderPagination('servicePagination', servicePage, totalPages, total, (p) => { servicePage = p; renderServices(); });
   }
 
-  function editService(id) {
-    const s = cachedServices.find(x => x.id === id);
-    if(!s) return;
-    document.getElementById('targetServiceId').value = s.id;
-    document.getElementById('sCategory').value = s.category;
-    document.getElementById('sName').value = s.name;
-    document.getElementById('sMerchantName').value = s.merchant_name || '';
-    document.getElementById('sPublishedDate').value = s.published_date;
-    document.getElementById('sDescription').value = s.description || '';
-    document.getElementById('sUserId').value = s.user_id || '';
-    document.getElementById('btnCancelServiceEdit').style.display = 'inline-block';
+  function openServiceModal(id) {
+    resetServiceForm();
+    if(id) {
+      const s = cachedServices.find(x => x.id === id);
+      if(!s) return;
+      document.getElementById('serviceModalTitle').textContent = '編輯服務專案';
+      document.getElementById('targetServiceId').value = s.id;
+      document.getElementById('sCategory').value = s.category || '';
+      document.getElementById('sName').value = s.name || '';
+      document.getElementById('sMerchantName').value = s.merchant_name || '';
+      document.getElementById('sPublishedDate').value = s.published_date || '';
+      document.getElementById('sDescription').value = s.description || '';
+      document.getElementById('sUserId').value = s.user_id || '';
+    } else {
+      document.getElementById('serviceModalTitle').textContent = '新增服務專案';
+    }
+    openModal('serviceModal');
   }
+
+  function editService(id) { openServiceModal(id); }
 
   function resetServiceForm() {
     document.getElementById('targetServiceId').value = '';
@@ -371,22 +589,99 @@
     document.getElementById('sPublishedDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('sDescription').value = '';
     document.getElementById('sUserId').value = '';
-    document.getElementById('btnCancelServiceEdit').style.display = 'none';
+    ['serviceModalTitle'].forEach(() => {});
+  }
+
+  async function saveService() {
+    const id = document.getElementById('targetServiceId').value;
+    const boundUserId = document.getElementById('sUserId').value;
+    const payload = {
+      category: document.getElementById('sCategory').value.trim(),
+      name: document.getElementById('sName').value.trim(),
+      merchant_name: document.getElementById('sMerchantName').value.trim() || null,
+      published_date: document.getElementById('sPublishedDate').value,
+      description: document.getElementById('sDescription').value.trim() || null,
+      has_uploaded: false,
+      user_id: boundUserId ? parseInt(boundUserId) : null
+    };
+    if(!payload.category || !payload.name) { alert('請填寫服務類別與專案名稱！'); return; }
+
+    const url = id ? `/api/services/${id}` : '/api/services';
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+
+    if(res.ok) {
+      closeModal('serviceModal');
+      await fetchServices();
+    } else {
+      alert('儲存服務專案失敗，請檢查輸入內容。');
+    }
   }
 
   async function deleteService(id) {
     if(confirm('確認要刪除此項專案嗎？')) {
       await fetch(`/api/services/${id}`, { method: 'DELETE' });
-      fetchServices();
+      await fetchServices();
     }
   }
 
-  // 初始讀取流程
+  // ── PAGINATION ──
+  function renderPagination(containerId, currentPage, totalPages, total, onPage) {
+    const el = document.getElementById(containerId);
+    if(totalPages <= 1 && total === 0) { el.innerHTML = ''; return; }
+
+    const start = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+    const end   = Math.min(currentPage * PAGE_SIZE, total);
+
+    let html = `<span class="page-info">顯示 ${start}–${end} / 共 ${total} 筆</span>`;
+    html += `<button class="page-btn" onclick="(${onPage.toString()})(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+
+    // show at most 5 page buttons
+    let s = Math.max(1, currentPage - 2), e = Math.min(totalPages, s + 4);
+    if(e - s < 4) s = Math.max(1, e - 4);
+    for(let p = s; p <= e; p++) {
+      html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="(${onPage.toString()})(${p})">${p}</button>`;
+    }
+
+    html += `<button class="page-btn" onclick="(${onPage.toString()})(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>›</button>`;
+    el.innerHTML = html;
+  }
+
+  // ── INIT ──
   async function init() {
-    await fetchUsers(); // 先抓使用者以便專案對照名稱
+    await fetchUsers();
     await fetchServices();
   }
   init();
+
+  // ESC close modal
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+    }
+  });
+
+  // populate sUserId inside service modal
+  const origFetchUsers = fetchUsers;
+  // patch sUserId after fetchUsers
+  async function populateServiceUserSelect() {
+    const select = document.getElementById('sUserId');
+    const cur = select.value;
+    select.innerHTML = '<option value="">-- 公開 / 不綁定特定客戶 --</option>';
+    cachedUsers.filter(u => u.role !== 'admin').forEach(u => {
+      const o = document.createElement('option');
+      o.value = u.id;
+      o.textContent = `${u.username} (${u.full_name || '未具名'})`;
+      select.appendChild(o);
+    });
+    select.value = cur;
+  }
+  // Override fetchUsers to also update select
+  const _fetchUsers = fetchUsers;
+  window.fetchUsers = async function() {
+    await _fetchUsers();
+    await populateServiceUserSelect();
+  };
 </script>
 </body>
 </html>
